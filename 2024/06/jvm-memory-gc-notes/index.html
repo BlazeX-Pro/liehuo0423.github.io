@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+    <style>
+        body
+        {
+            font-family: "Times New Roman", Helvetica, Tahoma, Arial, "LXGW WenKai", "notoserifsc-medium", "Microsoft YaHei", "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif !important;
+
+        }
+    </style>
+
+
+    <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport" />
+    <meta name="description" content="JVM 学习笔记：内存区域、垃圾回收与面试常考题" />
+    <meta name="hexo-theme-A4" content="v2.1.0" />
+    <link rel="alternate icon" type="image/webp" href="https://cdn.jsdelivr.net/gh/BlazeX-Pro/img/source/images/favicon.webp">
+    <title>JVM 学习笔记：内存区域、垃圾回收与面试常考题 | Blaze | a guy who loves fresh things</title>
+
+    
+        
+<link rel="stylesheet" href="/css/highlight/style1.css">
+
+        
+<link rel="stylesheet" href="/css/a11y-dark.min.css">
+
+        
+<link rel="stylesheet" href="/css/reset.css">
+
+        
+<link rel="stylesheet" href="/css/markdown.css">
+
+        
+<link rel="stylesheet" href="/css/fonts.css">
+
+         <!--注意：首页既不是post也不是page-->
+        
+            
+<link rel="stylesheet" href="/css/waline.css">
+
+        
+
+        
+<link rel="stylesheet" href="/css/ui.css">
+
+        
+<link rel="stylesheet" href="/css/style.css">
+
+
+        
+            <!--返回顶部css-->
+            
+<link rel="stylesheet" href="/css/returnToTop.css">
+
+            
+<link rel="stylesheet" href="/css/unicons.css">
+
+        
+        
+            <!--目录-->
+            
+<link rel="stylesheet" href="/css/toc.css">
+
+        
+    
+
+    
+        
+<link rel="stylesheet" href="/css/returnToLastPage.css">
+
+    
+
+    
+<link rel="stylesheet" href="/css/lightgallery-bundle.min.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/custom.css">
+
+    
+
+    
+
+    <!-- <link rel="stylesheet" href="https://chinese-fonts-cdn.deno.dev/packages/lxgwwenkai/dist/LXGWWenKai-Regular/result.css" /> -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/@chinese-fonts/lxgwwenkai@3.0.0/dist/LXGWWenKai-Regular/result.css' />
+
+    
+
+    
+<meta name="generator" content="Hexo 7.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/rss2.xml" title="Blaze" type="application/rss+xml">
+</head>
+
+    
+    
+
+    
+    
+
+
+
+    
+
+    
+    
+
+
+
+
+    <style>
+        .archive-main a:hover {
+            text-decoration: none; 
+        }
+    </style>
+
+    
+    
+
+
+    <body>
+        
+        <script src="https://cdn.jsdelivr.net/npm/darkreader@4.9.80/darkreader.min.js"></script>
+        <script>
+            const drOptions = {
+                brightness: 100,
+                contrast: 95,
+                sepia: 10,
+                darkSchemeTextColor: '#e0e0e0',  // 粉笔白文字
+                darkSchemeBackgroundColor: '#1e1e1e', // 黑板灰背景
+                scrollbarStyle: 'native'
+            };
+
+            const savedTheme = localStorage.getItem('theme');
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+                DarkReader.enable(drOptions);
+            }
+
+            window.addEventListener('DOMContentLoaded', () => {
+                const btn = document.createElement('button');
+                btn.innerText = '🌓';
+                // 按钮样式：仿照你之前的布局，放在右下角
+                btn.style.cssText = `
+                    position: fixed; 
+                    bottom: 40px; 
+                    left: 42px; 
+                    z-index: 9999;
+                    width: 44px; 
+                    height: 44px; 
+                    border-radius: 50%; 
+                    border: 1px solid #ccc;
+                    background: #f7f5ed; 
+                    color: #000;
+                    font-size: 22px; 
+                    cursor: pointer;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+                    transition: transform 0.2s, background-color 0.3s;
+                `;
+                // 根据当前状态初始化按钮颜色
+                if (DarkReader.isEnabled()) {
+                    btn.style.backgroundColor = '#1e1e1e';
+                    btn.style.color = '#fff';
+                }
+                btn.onmouseover = () => btn.style.transform = 'scale(1.1)';
+                btn.onmouseout = () => btn.style.transform = 'scale(1)';
+                document.body.appendChild(btn);
+                // 点击切换逻辑
+                btn.addEventListener('click', () => {
+                    if (DarkReader.isEnabled()) {
+                        DarkReader.disable();
+                        localStorage.setItem('theme', 'light');
+                        btn.style.backgroundColor = '#f7f5ed';
+                        btn.style.color = '#000';
+                    } else {
+                        DarkReader.enable(drOptions);
+                        localStorage.setItem('theme', 'dark');
+                        btn.style.backgroundColor = '#1e1e1e';
+                        btn.style.color = '#fff';
+                    }
+                });
+            });
+        </script>
+        
+        
+            
+                <div class="left-toc-container">
+                    <nav id="toc" class="bs-docs-sidebar"></nav>
+                </div>
+            
+        
+        <div class="paper">
+
+            
+
+            
+                <div class="shadow-drop-2-bottom paper-main">
+                    
+
+
+<div class="header">
+    <div class="header-container">
+        <style>
+            .header-img {
+                width: 56px;
+                height: auto;
+                object-fit: cover; /* 保持图片比例 */
+                transition: transform 0.3s ease-in-out; 
+                border-radius: 50%; 
+            }
+            
+        </style>
+        <img 
+            alt="^-^" 
+            cache-control="max-age=86400" 
+            class="header-img" 
+            src="https://cdn.jsdelivr.net/gh/BlazeX-Pro/img/source/images/favicon.webp" 
+        />
+        <div class="header-content">
+            <a class="logo" href="/">Blaze</a> 
+            <span class="description">全栈开发 | 热爱生活与技术</span> 
+        </div>
+    </div>
+    
+   
+    <ul class="nav">
+        
+            
+                <li><a href="/">🚀首页</a></li>
+            
+        
+            
+                <li><a href="/list/">🖊️文章</a></li>
+            
+        
+            
+                <li><a href="/works/">🌈作品</a></li>
+            
+        
+            
+                <li><a href="/tags/">🌟标签</a></li>
+            
+        
+            
+                <li><a href="/categories/">🗂️分类</a></li>
+            
+        
+            
+                <li><a href="/message/">💬留言</a></li>
+            
+        
+            
+                <li><a href="/about/">🤳关于</a></li>
+            
+        
+            
+                <li><a href="/now/">⚡️Now</a></li>
+            
+        
+        <!-- 暂时注释掉，还需要调整css  -->
+    </ul>
+</div>
+
+                    
+                    
+
+                    
+                    
+
+                    <!--说明是文章post页面-->
+                    
+                        <div class="post-main">
+    
+
+    
+        
+            
+                <div class="post-main-title" style="text-align: center;">
+                    JVM 学习笔记：内存区域、垃圾回收与面试常考题
+                </div>
+            
+        
+      
+    
+
+    
+
+        
+            <div class="post-head-meta-center">
+        
+                
+                
+                    
+                     <span>字数总计：752</span>
+                
+                
+                    
+                        &nbsp; | &nbsp;
+                    
+                    <span>阅读估时：2分钟</span>
+                
+                
+            </div>
+    
+
+    <div class="post-md">
+        
+            
+                <ol class="post-toc"><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA"><span class="post-toc-text">运行时数据区</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E5%AF%B9%E8%B1%A1%E7%94%9F%E6%AD%BB%E5%88%A4%E5%AE%9A"><span class="post-toc-text">对象生死判定</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E5%88%86%E4%BB%A3%E5%9B%9E%E6%94%B6%E7%9A%84%E9%80%BB%E8%BE%91"><span class="post-toc-text">分代回收的逻辑</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E5%B8%B8%E7%94%A8%E5%8F%82%E6%95%B0%E4%B8%8E%E6%8E%92%E6%9F%A5%E6%80%9D%E8%B7%AF"><span class="post-toc-text">常用参数与排查思路</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="post-toc-text">小结</span></a></li></ol>
+            
+        
+        <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/hint.css/2.7.0/hint.min.css"><div class=".article-gallery"><p>毕业季求职，JVM 是绕不过去的关卡。这篇文章把我刷题+看源码后整理的 JVM 核心知识过一遍，按”内存区域 → 对象创建 → 垃圾回收 → 参数调优”的顺序展开。</p>
+<h2 id="运行时数据区"><a href="#运行时数据区" class="headerlink" title="运行时数据区"></a>运行时数据区</h2><p>JVM 内存主要分这几块：</p>
+<table>
+<thead>
+<tr>
+<th>区域</th>
+<th>线程私有?</th>
+<th>存什么</th>
+<th>OOM 风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>程序计数器</td>
+<td>是</td>
+<td>当前字节码行号</td>
+<td>唯一不会 OOM 的区域</td>
+</tr>
+<tr>
+<td>虚拟机栈</td>
+<td>是</td>
+<td>栈帧（局部变量表、操作数栈）</td>
+<td>StackOverflowError</td>
+</tr>
+<tr>
+<td>堆</td>
+<td>否</td>
+<td>对象实例、数组</td>
+<td>OutOfMemoryError: Java heap space</td>
+</tr>
+<tr>
+<td>元空间</td>
+<td>否</td>
+<td>类元数据（JDK8 后在本地内存）</td>
+<td>OutOfMemoryError: Metaspace</td>
+</tr>
+</tbody></table>
+<p>面试高频题：”对象都分配在堆上吗？”——<strong>栈上分配</strong>和<strong>TLAB</strong>是两个重要的例外/优化。JVM 会做逃逸分析，确认对象不会逃出方法时可以在栈上分配随方法销毁；即便在堆上，每个线程也会先在 Eden 区私有的一小块 TLAB 里分配，避免多线程指针碰撞的竞争。</p>
+<h2 id="对象生死判定"><a href="#对象生死判定" class="headerlink" title="对象生死判定"></a>对象生死判定</h2><p>两种主流算法：</p>
+<ul>
+<li><strong>引用计数</strong>：简单但解决不了循环引用（A 引 B、B 引 A，计数永不为 0）；</li>
+<li><strong>可达性分析</strong>（HotSpot 采用）：从 GC Roots（虚拟机栈引用、静态属性、常量等）出发，不可达的对象即为可死。</li>
+</ul>
+<p>判定死后也不是立即回收，对象有三次”复活机会”——<code>finalize()</code> 方法没有执行过且有必要执行时会被放进 F-System 队列。但这个方法官方都不推荐用（执行时机不确定、无担保），知道概念应付面试即可，业务代码别写。</p>
+<h2 id="分代回收的逻辑"><a href="#分代回收的逻辑" class="headerlink" title="分代回收的逻辑"></a>分代回收的逻辑</h2><p>堆分新生代（Eden + S0 + S1）和老年代，逻辑是<strong>大多数对象朝生夕灭</strong>：</p>
+<ol>
+<li>新对象进 Eden，Eden 满了触发 Minor GC（复制算法，存活对象进 Survivor）；</li>
+<li>Survivor 里的对象每熬过一次 GC 年龄 +1，默认 15 岁晋升老年代；</li>
+<li>老年代满触发 Major GC / Full GC，成本远高于 Minor GC。</li>
+</ol>
+<p>所以调优的一个核心目标就是：<strong>让朝生夕灭的对象死在新生代，别晋升到老年代</strong>。<code>-XX:MaxTenuringThreshold</code> 调晋升年龄、<code>-Xmn</code> 调新生代大小，都是围绕这一点。</p>
+<h2 id="常用参数与排查思路"><a href="#常用参数与排查思路" class="headerlink" title="常用参数与排查思路"></a>常用参数与排查思路</h2><figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">java -Xms4g -Xmx4g \          <span class="comment"># 堆初始/最大（设成一样避免动态扩容抖动）</span></span><br><span class="line">     -Xmn2g \                 <span class="comment"># 新生代</span></span><br><span class="line">     -XX:+HeapDumpOnOutOfMemoryError \</span><br><span class="line">     -XX:HeapDumpPath=/var/log/dump.hprof \</span><br><span class="line">     -jar app.jar</span><br></pre></td></tr></tbody></table></figure>
+
+<p>线上排查 OOM 的标准动作：<strong>先拿到堆转储 → MAT 或 VisualVM 打开 → 看 Dominator Tree 找占用大头 → 结合代码定位泄漏点</strong>。见过最多的就是静态集合只 add 不 remove、监听器/线程池没释放、以及缓存无上限。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>JVM 知识的正确用法不是背八股，而是出问题时有排查抓手：看到频繁 Full GC 想到分代假设被打破（大对象、内存泄漏），看到线程 dump 卡住想到锁竞争。八股是地图，实践才是路。</p>
+</div><script src="https://jsd.onmicrosoft.cn/npm/hexo-theme-a4@latest/source/js/lightgallery.min.js"></script><script>if (typeof lightGallery !== 'undefined') {
+        var options = {
+            selector: '.gallery-item'
+        };
+        lightGallery(document.getElementsByClassName('.article-gallery')[0], options);
+        }</script>
+    </div>
+
+    <div class="post-meta">
+        <i>
+        
+            <span>2024-06-08</span>
+            
+                <span>该篇文章被 Blaze</span>
+            
+            
+                <span>打上标签:
+                    
+                    
+                        <a href='/tags/JVM/'>
+                            JVM
+                        </a>
+                    
+                </span>
+             
+             
+                <span>归为分类:
+                    
+                    
+                        <a href='/categories/%E5%BC%80%E5%8F%91/'>
+                            开发
+                        </a>
+                    
+                </span>
+            
+        
+        </i>
+    </div>
+    <br>
+    
+    
+
+    
+        
+    <div class="comments-container">
+    <div id="comment-anchor"></div>
+    <div class="comment-area-title">
+        以上
+    </div>
+    
+        
+
+    <div id="waline"></div>
+    <script type="module"  >
+        import { init } from 'https://npm.elemecdn.com/hexo-theme-a4@latest/source/js/waline.mjs';
+        function loadWaline() {
+            init({
+                el: '#waline',
+                serverURL: 'https://comment.liehuocoder.online/',
+                lang: 'zh-CN',
+                dark: 'body[class~="dark-mode"]',
+                requiredMeta: ['nick','mail'], // cannot customize by theme config, change it yourself
+                search: false, // 禁止表情包搜索
+                reaction: false, // 对文章打分
+                pageview: false, // 浏览量统计
+                comment: false, // 评论数统计
+
+                locale: {
+                    placeholder: '留言可以增加智力，不信你试试？',
+                    sofa: ''
+                },
+            });
+
+        }
+        window.addEventListener('DOMContentLoaded', loadWaline);
+    </script>
+
+
+
+    
+    
+    
+    
+    </div>
+
+
+     
+</div>
+
+
+
+
+                    
+
+                    <div class="footer">
+    
+        <span> 
+            © 2026 Blaze
+
+            
+                
+
+            
+                
+                    / <a href="/friends/"> 友链 </a>
+                
+
+            
+                
+                    / <a href="/contact/"> 联系 </a>
+                
+
+            
+                
+                    / <a href="/support/"> 支持 </a>
+                
+
+            
+                
+                    / <a href="/subscribe/"> 订阅 </a>
+                
+
+            
+        </span>
+       
+    
+</div>
+
+
+
+<!--这是指一条线往下的内容-->
+<div class="footer-last">
+    
+            <span>🔥做自己最喜欢的，做自己最擅长的🔥</span>
+            
+                <span class="footer-last-span-right">
+                    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">赣ICP备2026025832号</a>
+                    
+                </span>
+            
+            
+                <span class="footer-last-span-right"><i>本站由<a target="_blank" rel="noopener" href="https://hexo.io/zh-cn/index.html">Hexo</a>驱动｜使用<a target="_blank" rel="noopener" href="https://github.com/HiNinoJay/hexo-theme-A4">Hexo-theme-A4</a>主题</i></span>
+            
+    
+</div>
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+
+    <!--目录-->
+    
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript" ></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" type="text/javascript" ></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tocify/1.9.0/javascripts/jquery.tocify.min.js" type="text/javascript" ></script>
+        
+<script src="/js/toc.js"></script>
+
+    
+
+    
+<script src="/js/randomHeaderContent.js"></script>
+
+    <!--回到顶部按钮-->
+    
+        
+<script src="/js/returnToTop.js"></script>
+
+    
+
+    
+        
+<script src="/js/returnToLastPage.js"></script>
+
+    
+
+
+
+
+
+<script src="/js/lightgallery/lightgallery.umd.min.js"></script>
+
+
+
+<script src="/js/lightgallery/plugins/lg-thumbnail.umd.min.js"></script>
+
+
+
+<script src="/js/lightgallery/plugins/lg-fullscreen.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-autoplay.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-zoom.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-rotate.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-paper.umd.min.js"></script>
+
+
+
+
+<script type="text/javascript">
+     
+    if (typeof lightGallery !== "undefined") {
+        var options1 = {
+            selector: '.gallery-item',
+            plugins: [lgThumbnail, lgFullscreen, lgAutoplay, lgZoom, lgRotate, lgPager], // 启用插件
+            thumbnail: true,          // 显示缩略图
+            zoom: true,               // 启用缩放功
+            rotate: true,             // 启用旋转功能能
+            autoplay: true,        // 启用自动播放功能
+            fullScreen: true,      // 启用全屏功能
+            pager: false, //页码,
+            zoomFromOrigin: true,   // 从原始位置缩放
+            actualSize: true,       // 启用查看实际大小的功能
+            enableZoomAfter: 300,    // 延迟缩放，确保图片加载完成后可缩放
+        };
+        lightGallery(document.getElementsByClassName('.article-gallery')[0], options1); // 修复选择器
+    }
+    
+</script>
+
+
+                </div>
+            
+            
+                <!-- 回到顶部的按钮-->
+                <div class="progress-wrap shadow-drop-2-bottom">
+                    <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+                        <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"/>
+                    </svg>
+                </div>
+            
+            
+                <!-- 返回的按钮-->
+                <div class="return-to-last-progress-wrap shadow-drop-2-bottom">
+                    <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+                        <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"/>
+                    </svg>
+                </div>
+            
+    </body>
+</html>
+<script src="/js/emojiHandler.js"></script>
+<script src="/js/search.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        wrapEmojis('.paper');
+    });
+</script>

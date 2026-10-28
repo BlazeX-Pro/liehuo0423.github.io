@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+    <style>
+        body
+        {
+            font-family: "Times New Roman", Helvetica, Tahoma, Arial, "LXGW WenKai", "notoserifsc-medium", "Microsoft YaHei", "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif !important;
+
+        }
+    </style>
+
+
+    <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport" />
+    <meta name="description" content="Agent 评测引擎设计：三段式评分与&#34;防 AI 臆造分数&#34;机制" />
+    <meta name="hexo-theme-A4" content="v2.1.0" />
+    <link rel="alternate icon" type="image/webp" href="https://cdn.jsdelivr.net/gh/BlazeX-Pro/img/source/images/favicon.webp">
+    <title>Agent 评测引擎设计：三段式评分与&#34;防 AI 臆造分数&#34;机制 | Blaze | a guy who loves fresh things</title>
+
+    
+        
+<link rel="stylesheet" href="/css/highlight/style1.css">
+
+        
+<link rel="stylesheet" href="/css/a11y-dark.min.css">
+
+        
+<link rel="stylesheet" href="/css/reset.css">
+
+        
+<link rel="stylesheet" href="/css/markdown.css">
+
+        
+<link rel="stylesheet" href="/css/fonts.css">
+
+         <!--注意：首页既不是post也不是page-->
+        
+            
+<link rel="stylesheet" href="/css/waline.css">
+
+        
+
+        
+<link rel="stylesheet" href="/css/ui.css">
+
+        
+<link rel="stylesheet" href="/css/style.css">
+
+
+        
+            <!--返回顶部css-->
+            
+<link rel="stylesheet" href="/css/returnToTop.css">
+
+            
+<link rel="stylesheet" href="/css/unicons.css">
+
+        
+        
+            <!--目录-->
+            
+<link rel="stylesheet" href="/css/toc.css">
+
+        
+    
+
+    
+        
+<link rel="stylesheet" href="/css/returnToLastPage.css">
+
+    
+
+    
+<link rel="stylesheet" href="/css/lightgallery-bundle.min.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/custom.css">
+
+    
+
+    
+
+    <!-- <link rel="stylesheet" href="https://chinese-fonts-cdn.deno.dev/packages/lxgwwenkai/dist/LXGWWenKai-Regular/result.css" /> -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/@chinese-fonts/lxgwwenkai@3.0.0/dist/LXGWWenKai-Regular/result.css' />
+
+    
+
+    
+<meta name="generator" content="Hexo 7.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/rss2.xml" title="Blaze" type="application/rss+xml">
+</head>
+
+    
+    
+
+    
+    
+
+
+
+    
+
+    
+    
+
+
+
+
+    <style>
+        .archive-main a:hover {
+            text-decoration: none; 
+        }
+    </style>
+
+    
+    
+
+
+    <body>
+        
+        <script src="https://cdn.jsdelivr.net/npm/darkreader@4.9.80/darkreader.min.js"></script>
+        <script>
+            const drOptions = {
+                brightness: 100,
+                contrast: 95,
+                sepia: 10,
+                darkSchemeTextColor: '#e0e0e0',  // 粉笔白文字
+                darkSchemeBackgroundColor: '#1e1e1e', // 黑板灰背景
+                scrollbarStyle: 'native'
+            };
+
+            const savedTheme = localStorage.getItem('theme');
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+                DarkReader.enable(drOptions);
+            }
+
+            window.addEventListener('DOMContentLoaded', () => {
+                const btn = document.createElement('button');
+                btn.innerText = '🌓';
+                // 按钮样式：仿照你之前的布局，放在右下角
+                btn.style.cssText = `
+                    position: fixed; 
+                    bottom: 40px; 
+                    left: 42px; 
+                    z-index: 9999;
+                    width: 44px; 
+                    height: 44px; 
+                    border-radius: 50%; 
+                    border: 1px solid #ccc;
+                    background: #f7f5ed; 
+                    color: #000;
+                    font-size: 22px; 
+                    cursor: pointer;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+                    transition: transform 0.2s, background-color 0.3s;
+                `;
+                // 根据当前状态初始化按钮颜色
+                if (DarkReader.isEnabled()) {
+                    btn.style.backgroundColor = '#1e1e1e';
+                    btn.style.color = '#fff';
+                }
+                btn.onmouseover = () => btn.style.transform = 'scale(1.1)';
+                btn.onmouseout = () => btn.style.transform = 'scale(1)';
+                document.body.appendChild(btn);
+                // 点击切换逻辑
+                btn.addEventListener('click', () => {
+                    if (DarkReader.isEnabled()) {
+                        DarkReader.disable();
+                        localStorage.setItem('theme', 'light');
+                        btn.style.backgroundColor = '#f7f5ed';
+                        btn.style.color = '#000';
+                    } else {
+                        DarkReader.enable(drOptions);
+                        localStorage.setItem('theme', 'dark');
+                        btn.style.backgroundColor = '#1e1e1e';
+                        btn.style.color = '#fff';
+                    }
+                });
+            });
+        </script>
+        
+        
+            
+                <div class="left-toc-container">
+                    <nav id="toc" class="bs-docs-sidebar"></nav>
+                </div>
+            
+        
+        <div class="paper">
+
+            
+
+            
+                <div class="shadow-drop-2-bottom paper-main">
+                    
+
+
+<div class="header">
+    <div class="header-container">
+        <style>
+            .header-img {
+                width: 56px;
+                height: auto;
+                object-fit: cover; /* 保持图片比例 */
+                transition: transform 0.3s ease-in-out; 
+                border-radius: 50%; 
+            }
+            
+        </style>
+        <img 
+            alt="^-^" 
+            cache-control="max-age=86400" 
+            class="header-img" 
+            src="https://cdn.jsdelivr.net/gh/BlazeX-Pro/img/source/images/favicon.webp" 
+        />
+        <div class="header-content">
+            <a class="logo" href="/">Blaze</a> 
+            <span class="description">全栈开发 | 热爱生活与技术</span> 
+        </div>
+    </div>
+    
+   
+    <ul class="nav">
+        
+            
+                <li><a href="/">🚀首页</a></li>
+            
+        
+            
+                <li><a href="/list/">🖊️文章</a></li>
+            
+        
+            
+                <li><a href="/works/">🌈作品</a></li>
+            
+        
+            
+                <li><a href="/tags/">🌟标签</a></li>
+            
+        
+            
+                <li><a href="/categories/">🗂️分类</a></li>
+            
+        
+            
+                <li><a href="/message/">💬留言</a></li>
+            
+        
+            
+                <li><a href="/about/">🤳关于</a></li>
+            
+        
+            
+                <li><a href="/now/">⚡️Now</a></li>
+            
+        
+        <!-- 暂时注释掉，还需要调整css  -->
+    </ul>
+</div>
+
+                    
+                    
+
+                    
+                    
+
+                    <!--说明是文章post页面-->
+                    
+                        <div class="post-main">
+    
+
+    
+        
+            
+                <div class="post-main-title" style="text-align: center;">
+                    Agent 评测引擎设计：三段式评分与&#34;防 AI 臆造分数&#34;机制
+                </div>
+            
+        
+      
+    
+
+    
+
+        
+            <div class="post-head-meta-center">
+        
+                
+                
+                    
+                     <span>字数总计：940</span>
+                
+                
+                    
+                        &nbsp; | &nbsp;
+                    
+                    <span>阅读估时：3分钟</span>
+                
+                
+            </div>
+    
+
+    <div class="post-md">
+        
+            
+                <ol class="post-toc"><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%83%BD%E7%9B%B4%E6%8E%A5%E8%AE%A9%E5%A4%A7%E6%A8%A1%E5%9E%8B%E6%89%93%E5%88%86"><span class="post-toc-text">为什么不能直接让大模型打分</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E4%B8%89%E6%AE%B5%E5%BC%8F%E8%AF%84%E6%B5%8B%E5%BC%95%E6%93%8E"><span class="post-toc-text">三段式评测引擎</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E5%8F%AF%E8%A7%A3%E9%87%8A%EF%BC%9A%E5%88%86%E6%95%B0%E8%A6%81%E8%83%BD%E2%80%9D%E6%8E%B0%E5%BC%80%E6%8F%89%E7%A2%8E%E2%80%9D"><span class="post-toc-text">可解释：分数要能”掰开揉碎”</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E6%95%88%E6%9E%9C"><span class="post-toc-text">效果</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="post-toc-text">小结</span></a></li></ol>
+            
+        
+        <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/hint.css/2.7.0/hint.min.css"><div class=".article-gallery"><p>AI 实训平台最核心也最敏感的模块是评测引擎——学生的智能体作业由系统自动打分，分数直接进教务。这类系统的设计底线只有一条：<strong>分数必须可辩护</strong>。这篇讲三段式评测引擎的设计，以及怎么从机制上杜绝”AI 臆造分数”。</p>
+<h2 id="为什么不能直接让大模型打分"><a href="#为什么不能直接让大模型打分" class="headerlink" title="为什么不能直接让大模型打分"></a>为什么不能直接让大模型打分</h2><p>天真方案：把学生作业和评分标准丢给大模型，输出一个分数。三个致命问题：</p>
+<ol>
+<li><strong>不稳定</strong>：同一份作业两次打分能差 10 分，学生申诉时无法解释；</li>
+<li><strong>越界打分</strong>：简答题满分 10 分，模型偶尔吐出 15 分或负分；</li>
+<li><strong>臆造事实</strong>：模型可能给没做过的步骤打分（”已正确配置知识库 ✅”——学生根本没配）。</li>
+</ol>
+<h2 id="三段式评测引擎"><a href="#三段式评测引擎" class="headerlink" title="三段式评测引擎"></a>三段式评测引擎</h2><figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">第一段：客观题规则判分（代码判分，零模型参与）</span><br><span class="line">    ↓</span><br><span class="line">第二段：完整性检查（规则 + 模型辅助判定"做了没有"）</span><br><span class="line">    ↓</span><br><span class="line">第三段：教师自评（模型给建议分，教师裁定最终分）</span><br></pre></td></tr></tbody></table></figure>
+
+<p><strong>第一段：客观题纯规则判分。</strong> 单选/多选/判断直接比对答案；配置类题目解析学生智能体的配置 JSON，按字段规则判分。原则：<strong>能用代码判的绝不交给模型</strong>——确定性任务用概率模型是设计错误。</p>
+<p><strong>第二段：完整性检查。</strong> 检查知识库挂载、MCP 工具授权、团队智能体关联这些”动作型”要求。先用规则查结构化数据（知识库绑定表有无记录），模糊项（如”提示词是否包含角色设定”）才用模型辅助判定，且模型只输出”有/无/不确定”三值，不输出分数。</p>
+<p><strong>第三段：简答题的钳制打分。</strong> 这是防臆造的核心设计：</p>
+<figure class="highlight python"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">grade_short_answer</span>(<span class="params">question, rubric, student_answer</span>):</span><br><span class="line">    suggest = llm_grade(question, rubric, student_answer)  <span class="comment"># 模型建议分</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># 钳制：建议分必须落在 [0, 满分] 区间</span></span><br><span class="line">    clamped = <span class="built_in">max</span>(<span class="number">0</span>, <span class="built_in">min</span>(suggest, question.score))</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 记录：模型原始分、钳制过程全部落库，作为审计依据</span></span><br><span class="line">    audit_log.save(question, suggest, clamped, rubric)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> TeacherReview(           <span class="comment"># 最终状态永远是"待教师裁定"</span></span><br><span class="line">        suggested_score=clamped,</span><br><span class="line">        status=PENDING_TEACHER</span><br><span class="line">    )</span><br></pre></td></tr></tbody></table></figure>
+
+<p>三重保险：<strong>输入侧</strong>（评分标准结构化，rubric 逐条给分点）→ <strong>钳制侧</strong>（数学上杜绝越界分数）→ <strong>裁定侧</strong>（教师改分是最终生效值，模型分永远只是建议）。教师看到模型建议 + 逐条依据，一键改分，改分动作本身也进审计。</p>
+<h2 id="可解释：分数要能”掰开揉碎”"><a href="#可解释：分数要能”掰开揉碎”" class="headerlink" title="可解释：分数要能”掰开揉碎”"></a>可解释：分数要能”掰开揉碎”</h2><p>学生申诉”为什么这题只有 6 分”时，客服式回答”AI 评的”等于宣判产品死刑。我们的做法：</p>
+<ul>
+<li>模型打分时强制输出<strong>逐条给分点的命中情况</strong>：”角色设定（2/2）、工具声明（2/2）、异常处理（2/4）——未提及超时降级策略”；</li>
+<li>前端呈现得分分布雷达图 + 逐题扣分原因展开；</li>
+<li>逐节点 trace 可查看（下一篇展开版本快照和审计）。</li>
+</ul>
+<h2 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h2><p>上线一学期，成绩申诉率从纯模型打分时期的 15% 降到 2% 以内——申诉几乎全部收敛为”教师人工复核后改分”的正常流程，没有再出现”学生质疑系统乱给分”的信任危机。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>评测引擎的设计哲学可以推广到所有”AI 参与决策”的场景：<strong>AI 提供建议，规则约束边界，人类保留终审</strong>。把 AI 关进制度的笼子，不是不信任 AI，而是让它的输出经得起质疑——这对教育场景尤为重要，分数不仅是数字，还是公平的载体。</p>
+</div><script src="https://jsd.onmicrosoft.cn/npm/hexo-theme-a4@latest/source/js/lightgallery.min.js"></script><script>if (typeof lightGallery !== 'undefined') {
+        var options = {
+            selector: '.gallery-item'
+        };
+        lightGallery(document.getElementsByClassName('.article-gallery')[0], options);
+        }</script>
+    </div>
+
+    <div class="post-meta">
+        <i>
+        
+            <span>2026-08-15</span>
+            
+                <span>该篇文章被 Blaze</span>
+            
+            
+                <span>打上标签:
+                    
+                    
+                        <a href='/tags/Agent/'>
+                            Agent
+                        </a>
+                    
+                </span>
+             
+             
+                <span>归为分类:
+                    
+                    
+                        <a href='/categories/%E5%BC%80%E5%8F%91/'>
+                            开发
+                        </a>
+                    
+                </span>
+            
+        
+        </i>
+    </div>
+    <br>
+    
+    
+
+    
+        
+    <div class="comments-container">
+    <div id="comment-anchor"></div>
+    <div class="comment-area-title">
+        以上
+    </div>
+    
+        
+
+    <div id="waline"></div>
+    <script type="module"  >
+        import { init } from 'https://npm.elemecdn.com/hexo-theme-a4@latest/source/js/waline.mjs';
+        function loadWaline() {
+            init({
+                el: '#waline',
+                serverURL: 'https://comment.liehuocoder.online/',
+                lang: 'zh-CN',
+                dark: 'body[class~="dark-mode"]',
+                requiredMeta: ['nick','mail'], // cannot customize by theme config, change it yourself
+                search: false, // 禁止表情包搜索
+                reaction: false, // 对文章打分
+                pageview: false, // 浏览量统计
+                comment: false, // 评论数统计
+
+                locale: {
+                    placeholder: '留言可以增加智力，不信你试试？',
+                    sofa: ''
+                },
+            });
+
+        }
+        window.addEventListener('DOMContentLoaded', loadWaline);
+    </script>
+
+
+
+    
+    
+    
+    
+    </div>
+
+
+     
+</div>
+
+
+
+
+                    
+
+                    <div class="footer">
+    
+        <span> 
+            © 2026 Blaze
+
+            
+                
+
+            
+                
+                    / <a href="/friends/"> 友链 </a>
+                
+
+            
+                
+                    / <a href="/contact/"> 联系 </a>
+                
+
+            
+                
+                    / <a href="/support/"> 支持 </a>
+                
+
+            
+                
+                    / <a href="/subscribe/"> 订阅 </a>
+                
+
+            
+        </span>
+       
+    
+</div>
+
+
+
+<!--这是指一条线往下的内容-->
+<div class="footer-last">
+    
+            <span>🔥做自己最喜欢的，做自己最擅长的🔥</span>
+            
+                <span class="footer-last-span-right">
+                    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">赣ICP备2026025832号</a>
+                    
+                </span>
+            
+            
+                <span class="footer-last-span-right"><i>本站由<a target="_blank" rel="noopener" href="https://hexo.io/zh-cn/index.html">Hexo</a>驱动｜使用<a target="_blank" rel="noopener" href="https://github.com/HiNinoJay/hexo-theme-A4">Hexo-theme-A4</a>主题</i></span>
+            
+    
+</div>
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+
+    <!--目录-->
+    
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript" ></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" type="text/javascript" ></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tocify/1.9.0/javascripts/jquery.tocify.min.js" type="text/javascript" ></script>
+        
+<script src="/js/toc.js"></script>
+
+    
+
+    
+<script src="/js/randomHeaderContent.js"></script>
+
+    <!--回到顶部按钮-->
+    
+        
+<script src="/js/returnToTop.js"></script>
+
+    
+
+    
+        
+<script src="/js/returnToLastPage.js"></script>
+
+    
+
+
+
+
+
+<script src="/js/lightgallery/lightgallery.umd.min.js"></script>
+
+
+
+<script src="/js/lightgallery/plugins/lg-thumbnail.umd.min.js"></script>
+
+
+
+<script src="/js/lightgallery/plugins/lg-fullscreen.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-autoplay.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-zoom.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-rotate.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-paper.umd.min.js"></script>
+
+
+
+
+<script type="text/javascript">
+     
+    if (typeof lightGallery !== "undefined") {
+        var options1 = {
+            selector: '.gallery-item',
+            plugins: [lgThumbnail, lgFullscreen, lgAutoplay, lgZoom, lgRotate, lgPager], // 启用插件
+            thumbnail: true,          // 显示缩略图
+            zoom: true,               // 启用缩放功
+            rotate: true,             // 启用旋转功能能
+            autoplay: true,        // 启用自动播放功能
+            fullScreen: true,      // 启用全屏功能
+            pager: false, //页码,
+            zoomFromOrigin: true,   // 从原始位置缩放
+            actualSize: true,       // 启用查看实际大小的功能
+            enableZoomAfter: 300,    // 延迟缩放，确保图片加载完成后可缩放
+        };
+        lightGallery(document.getElementsByClassName('.article-gallery')[0], options1); // 修复选择器
+    }
+    
+</script>
+
+
+                </div>
+            
+            
+                <!-- 回到顶部的按钮-->
+                <div class="progress-wrap shadow-drop-2-bottom">
+                    <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+                        <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"/>
+                    </svg>
+                </div>
+            
+            
+                <!-- 返回的按钮-->
+                <div class="return-to-last-progress-wrap shadow-drop-2-bottom">
+                    <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+                        <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"/>
+                    </svg>
+                </div>
+            
+    </body>
+</html>
+<script src="/js/emojiHandler.js"></script>
+<script src="/js/search.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        wrapEmojis('.paper');
+    });
+</script>

@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+    <style>
+        body
+        {
+            font-family: "Times New Roman", Helvetica, Tahoma, Arial, "LXGW WenKai", "notoserifsc-medium", "Microsoft YaHei", "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif !important;
+
+        }
+    </style>
+
+
+    <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport" />
+    <meta name="description" content="SSE 流式响应原理与 Spring Boot 实现打字机效果" />
+    <meta name="hexo-theme-A4" content="v2.1.0" />
+    <link rel="alternate icon" type="image/webp" href="https://cdn.jsdelivr.net/gh/BlazeX-Pro/img/source/images/favicon.webp">
+    <title>SSE 流式响应原理与 Spring Boot 实现打字机效果 | Blaze | a guy who loves fresh things</title>
+
+    
+        
+<link rel="stylesheet" href="/css/highlight/style1.css">
+
+        
+<link rel="stylesheet" href="/css/a11y-dark.min.css">
+
+        
+<link rel="stylesheet" href="/css/reset.css">
+
+        
+<link rel="stylesheet" href="/css/markdown.css">
+
+        
+<link rel="stylesheet" href="/css/fonts.css">
+
+         <!--注意：首页既不是post也不是page-->
+        
+            
+<link rel="stylesheet" href="/css/waline.css">
+
+        
+
+        
+<link rel="stylesheet" href="/css/ui.css">
+
+        
+<link rel="stylesheet" href="/css/style.css">
+
+
+        
+            <!--返回顶部css-->
+            
+<link rel="stylesheet" href="/css/returnToTop.css">
+
+            
+<link rel="stylesheet" href="/css/unicons.css">
+
+        
+        
+            <!--目录-->
+            
+<link rel="stylesheet" href="/css/toc.css">
+
+        
+    
+
+    
+        
+<link rel="stylesheet" href="/css/returnToLastPage.css">
+
+    
+
+    
+<link rel="stylesheet" href="/css/lightgallery-bundle.min.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/custom.css">
+
+    
+
+    
+
+    <!-- <link rel="stylesheet" href="https://chinese-fonts-cdn.deno.dev/packages/lxgwwenkai/dist/LXGWWenKai-Regular/result.css" /> -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/@chinese-fonts/lxgwwenkai@3.0.0/dist/LXGWWenKai-Regular/result.css' />
+
+    
+
+    
+<meta name="generator" content="Hexo 7.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/rss2.xml" title="Blaze" type="application/rss+xml">
+</head>
+
+    
+    
+
+    
+    
+
+
+
+    
+
+    
+    
+
+
+
+
+    <style>
+        .archive-main a:hover {
+            text-decoration: none; 
+        }
+    </style>
+
+    
+    
+
+
+    <body>
+        
+        <script src="https://cdn.jsdelivr.net/npm/darkreader@4.9.80/darkreader.min.js"></script>
+        <script>
+            const drOptions = {
+                brightness: 100,
+                contrast: 95,
+                sepia: 10,
+                darkSchemeTextColor: '#e0e0e0',  // 粉笔白文字
+                darkSchemeBackgroundColor: '#1e1e1e', // 黑板灰背景
+                scrollbarStyle: 'native'
+            };
+
+            const savedTheme = localStorage.getItem('theme');
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+                DarkReader.enable(drOptions);
+            }
+
+            window.addEventListener('DOMContentLoaded', () => {
+                const btn = document.createElement('button');
+                btn.innerText = '🌓';
+                // 按钮样式：仿照你之前的布局，放在右下角
+                btn.style.cssText = `
+                    position: fixed; 
+                    bottom: 40px; 
+                    left: 42px; 
+                    z-index: 9999;
+                    width: 44px; 
+                    height: 44px; 
+                    border-radius: 50%; 
+                    border: 1px solid #ccc;
+                    background: #f7f5ed; 
+                    color: #000;
+                    font-size: 22px; 
+                    cursor: pointer;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+                    transition: transform 0.2s, background-color 0.3s;
+                `;
+                // 根据当前状态初始化按钮颜色
+                if (DarkReader.isEnabled()) {
+                    btn.style.backgroundColor = '#1e1e1e';
+                    btn.style.color = '#fff';
+                }
+                btn.onmouseover = () => btn.style.transform = 'scale(1.1)';
+                btn.onmouseout = () => btn.style.transform = 'scale(1)';
+                document.body.appendChild(btn);
+                // 点击切换逻辑
+                btn.addEventListener('click', () => {
+                    if (DarkReader.isEnabled()) {
+                        DarkReader.disable();
+                        localStorage.setItem('theme', 'light');
+                        btn.style.backgroundColor = '#f7f5ed';
+                        btn.style.color = '#000';
+                    } else {
+                        DarkReader.enable(drOptions);
+                        localStorage.setItem('theme', 'dark');
+                        btn.style.backgroundColor = '#1e1e1e';
+                        btn.style.color = '#fff';
+                    }
+                });
+            });
+        </script>
+        
+        
+            
+                <div class="left-toc-container">
+                    <nav id="toc" class="bs-docs-sidebar"></nav>
+                </div>
+            
+        
+        <div class="paper">
+
+            
+
+            
+                <div class="shadow-drop-2-bottom paper-main">
+                    
+
+
+<div class="header">
+    <div class="header-container">
+        <style>
+            .header-img {
+                width: 56px;
+                height: auto;
+                object-fit: cover; /* 保持图片比例 */
+                transition: transform 0.3s ease-in-out; 
+                border-radius: 50%; 
+            }
+            
+        </style>
+        <img 
+            alt="^-^" 
+            cache-control="max-age=86400" 
+            class="header-img" 
+            src="https://cdn.jsdelivr.net/gh/BlazeX-Pro/img/source/images/favicon.webp" 
+        />
+        <div class="header-content">
+            <a class="logo" href="/">Blaze</a> 
+            <span class="description">全栈开发 | 热爱生活与技术</span> 
+        </div>
+    </div>
+    
+   
+    <ul class="nav">
+        
+            
+                <li><a href="/">🚀首页</a></li>
+            
+        
+            
+                <li><a href="/list/">🖊️文章</a></li>
+            
+        
+            
+                <li><a href="/works/">🌈作品</a></li>
+            
+        
+            
+                <li><a href="/tags/">🌟标签</a></li>
+            
+        
+            
+                <li><a href="/categories/">🗂️分类</a></li>
+            
+        
+            
+                <li><a href="/message/">💬留言</a></li>
+            
+        
+            
+                <li><a href="/about/">🤳关于</a></li>
+            
+        
+            
+                <li><a href="/now/">⚡️Now</a></li>
+            
+        
+        <!-- 暂时注释掉，还需要调整css  -->
+    </ul>
+</div>
+
+                    
+                    
+
+                    
+                    
+
+                    <!--说明是文章post页面-->
+                    
+                        <div class="post-main">
+    
+
+    
+        
+            
+                <div class="post-main-title" style="text-align: center;">
+                    SSE 流式响应原理与 Spring Boot 实现打字机效果
+                </div>
+            
+        
+      
+    
+
+    
+
+        
+            <div class="post-head-meta-center">
+        
+                
+                
+                    
+                     <span>字数总计：600</span>
+                
+                
+                    
+                        &nbsp; | &nbsp;
+                    
+                    <span>阅读估时：2分钟</span>
+                
+                
+            </div>
+    
+
+    <div class="post-md">
+        
+            
+                <ol class="post-toc"><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#SSE-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="post-toc-text">SSE 是什么</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#Spring-Boot-%E6%9C%8D%E5%8A%A1%E7%AB%AF"><span class="post-toc-text">Spring Boot 服务端</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E5%89%8D%E7%AB%AF%E6%8E%A5%E6%94%B6"><span class="post-toc-text">前端接收</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="post-toc-text">小结</span></a></li></ol>
+            
+        
+        <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/hint.css/2.7.0/hint.min.css"><div class=".article-gallery"><p>大模型应用的”打字机效果”几乎人见人爱，背后是 SSE（Server-Sent Events）在工作。这篇从协议讲到实现，顺便说清楚它和 WebSocket 的边界。</p>
+<h2 id="SSE-是什么"><a href="#SSE-是什么" class="headerlink" title="SSE 是什么"></a>SSE 是什么</h2><p>HTTP 的传统模式是一问一答：请求发出，等完整响应。SSE 允许服务器<strong>单向地、持续地</strong>向客户端推送文本事件，基于 HTTP 长连接实现：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">HTTP/1.1 200 OK</span><br><span class="line">Content-Type: text/event-stream</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Connection: keep-alive</span><br><span class="line"></span><br><span class="line">data: {"content":"你"}</span><br><span class="line"></span><br><span class="line">data: {"content":"好"}</span><br><span class="line"></span><br><span class="line">data: [DONE]</span><br></pre></td></tr></tbody></table></figure>
+
+<p>格式就三条规则：<code>data:</code> 开头、空行分隔事件、<code>data: [DONE]</code> 约定结束。文本协议、纯 HTTP、自动重连（浏览器 EventSource 断线默认 3 秒重连），比 WebSocket 轻得多。</p>
+<p><strong>和 WebSocket 的选择标准</strong>：需要双向实时（聊天室、协同编辑）用 WebSocket；只需要服务器持续下推（AI 生成、行情推送、进度通知）用 SSE——AI 对话场景天然是”用户说一句、模型吐一串”，SSE 刚好够用还省掉了连接升级的复杂度。</p>
+<h2 id="Spring-Boot-服务端"><a href="#Spring-Boot-服务端" class="headerlink" title="Spring Boot 服务端"></a>Spring Boot 服务端</h2><p>Spring MVC 写法（对应简历里做过的 SSE 落地）：</p>
+<figure class="highlight java"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)</span></span><br><span class="line"><span class="keyword">public</span> SseEmitter <span class="title function_">streamChat</span><span class="params">(<span class="meta">@RequestParam</span> String question)</span> {</span><br><span class="line">    <span class="type">SseEmitter</span> <span class="variable">emitter</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">SseEmitter</span>(<span class="number">60_000L</span>); <span class="comment">// 60s 超时</span></span><br><span class="line"></span><br><span class="line">    executor.execute(() -&gt; {</span><br><span class="line">        <span class="keyword">try</span> {</span><br><span class="line">            <span class="type">StringBuilder</span> <span class="variable">sb</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">StringBuilder</span>();</span><br><span class="line">            <span class="keyword">for</span> (String token : modelClient.stream(question)) {  <span class="comment">// 模型逐 token 返回</span></span><br><span class="line">                sb.append(token);</span><br><span class="line">                emitter.send(SseEmitter.event()</span><br><span class="line">                        .data(Map.of(<span class="string">"delta"</span>, token)));</span><br><span class="line">            }</span><br><span class="line">            emitter.send(SseEmitter.event().data(<span class="string">"[DONE]"</span>));</span><br><span class="line">            emitter.complete();</span><br><span class="line">        } <span class="keyword">catch</span> (Exception e) {</span><br><span class="line">            emitter.completeWithError(e);</span><br><span class="line">        }</span><br><span class="line">    });</span><br><span class="line">    <span class="keyword">return</span> emitter;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>WebFlux 的 <code>Flux&lt;ServerSentEvent&gt;</code> 写法更声明式，底层同样是这条 HTTP 长连接。</p>
+<p>三个工程细节：</p>
+<ol>
+<li><strong>超时要设</strong>：<code>SseEmitter</code> 默认不超时，连接泄漏会拖垮线程池；</li>
+<li><strong>网关要放行长连接</strong>：Nginx 默认 <code>proxy_read_timeout 60s</code>，且要关掉响应缓冲（<code>proxy_buffering off</code>），否则网关把 token 攒批发给前端，打字机变成”整段蹦”；</li>
+<li><strong>异常要推给前端</strong>：模型中途限流/超时，走 <code>completeWithError</code> 或发一个 error 事件，别默默断开——前端拿不到任何信息是最差的体验。</li>
+</ol>
+<h2 id="前端接收"><a href="#前端接收" class="headerlink" title="前端接收"></a>前端接收</h2><figure class="highlight javascript"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> es = <span class="keyword">new</span> <span class="title class_">EventSource</span>(<span class="string">'/chat/stream?question='</span> + <span class="built_in">encodeURIComponent</span>(q));</span><br><span class="line">es.<span class="property">onmessage</span> = <span class="function">(<span class="params">e</span>) =&gt;</span> {</span><br><span class="line">  <span class="keyword">if</span> (e.<span class="property">data</span> === <span class="string">'[DONE]'</span>) { es.<span class="title function_">close</span>(); <span class="keyword">return</span>; }</span><br><span class="line">  outputEl.<span class="property">textContent</span> += <span class="title class_">JSON</span>.<span class="title function_">parse</span>(e.<span class="property">data</span>).<span class="property">delta</span>;</span><br><span class="line">};</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>SSE 是 AI 应用的默认传输方案：比轮询省资源、比 WebSocket 简单、天然适配”逐 token 生成”的模型特性。协议本身半天能学会，值钱的是超时、缓冲、异常这些工程细节——它们决定了 demo 和产品之间的差距。</p>
+</div><script src="https://jsd.onmicrosoft.cn/npm/hexo-theme-a4@latest/source/js/lightgallery.min.js"></script><script>if (typeof lightGallery !== 'undefined') {
+        var options = {
+            selector: '.gallery-item'
+        };
+        lightGallery(document.getElementsByClassName('.article-gallery')[0], options);
+        }</script>
+    </div>
+
+    <div class="post-meta">
+        <i>
+        
+            <span>2024-10-12</span>
+            
+                <span>该篇文章被 Blaze</span>
+            
+            
+                <span>打上标签:
+                    
+                    
+                        <a href='/tags/SSE/'>
+                            SSE
+                        </a>
+                    
+                </span>
+             
+             
+                <span>归为分类:
+                    
+                    
+                        <a href='/categories/%E5%BC%80%E5%8F%91/'>
+                            开发
+                        </a>
+                    
+                </span>
+            
+        
+        </i>
+    </div>
+    <br>
+    
+    
+
+    
+        
+    <div class="comments-container">
+    <div id="comment-anchor"></div>
+    <div class="comment-area-title">
+        以上
+    </div>
+    
+        
+
+    <div id="waline"></div>
+    <script type="module"  >
+        import { init } from 'https://npm.elemecdn.com/hexo-theme-a4@latest/source/js/waline.mjs';
+        function loadWaline() {
+            init({
+                el: '#waline',
+                serverURL: 'https://comment.liehuocoder.online/',
+                lang: 'zh-CN',
+                dark: 'body[class~="dark-mode"]',
+                requiredMeta: ['nick','mail'], // cannot customize by theme config, change it yourself
+                search: false, // 禁止表情包搜索
+                reaction: false, // 对文章打分
+                pageview: false, // 浏览量统计
+                comment: false, // 评论数统计
+
+                locale: {
+                    placeholder: '留言可以增加智力，不信你试试？',
+                    sofa: ''
+                },
+            });
+
+        }
+        window.addEventListener('DOMContentLoaded', loadWaline);
+    </script>
+
+
+
+    
+    
+    
+    
+    </div>
+
+
+     
+</div>
+
+
+
+
+                    
+
+                    <div class="footer">
+    
+        <span> 
+            © 2026 Blaze
+
+            
+                
+
+            
+                
+                    / <a href="/friends/"> 友链 </a>
+                
+
+            
+                
+                    / <a href="/contact/"> 联系 </a>
+                
+
+            
+                
+                    / <a href="/support/"> 支持 </a>
+                
+
+            
+                
+                    / <a href="/subscribe/"> 订阅 </a>
+                
+
+            
+        </span>
+       
+    
+</div>
+
+
+
+<!--这是指一条线往下的内容-->
+<div class="footer-last">
+    
+            <span>🔥做自己最喜欢的，做自己最擅长的🔥</span>
+            
+                <span class="footer-last-span-right">
+                    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">赣ICP备2026025832号</a>
+                    
+                </span>
+            
+            
+                <span class="footer-last-span-right"><i>本站由<a target="_blank" rel="noopener" href="https://hexo.io/zh-cn/index.html">Hexo</a>驱动｜使用<a target="_blank" rel="noopener" href="https://github.com/HiNinoJay/hexo-theme-A4">Hexo-theme-A4</a>主题</i></span>
+            
+    
+</div>
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+
+    <!--目录-->
+    
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript" ></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" type="text/javascript" ></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tocify/1.9.0/javascripts/jquery.tocify.min.js" type="text/javascript" ></script>
+        
+<script src="/js/toc.js"></script>
+
+    
+
+    
+<script src="/js/randomHeaderContent.js"></script>
+
+    <!--回到顶部按钮-->
+    
+        
+<script src="/js/returnToTop.js"></script>
+
+    
+
+    
+        
+<script src="/js/returnToLastPage.js"></script>
+
+    
+
+
+
+
+
+<script src="/js/lightgallery/lightgallery.umd.min.js"></script>
+
+
+
+<script src="/js/lightgallery/plugins/lg-thumbnail.umd.min.js"></script>
+
+
+
+<script src="/js/lightgallery/plugins/lg-fullscreen.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-autoplay.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-zoom.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-rotate.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-paper.umd.min.js"></script>
+
+
+
+
+<script type="text/javascript">
+     
+    if (typeof lightGallery !== "undefined") {
+        var options1 = {
+            selector: '.gallery-item',
+            plugins: [lgThumbnail, lgFullscreen, lgAutoplay, lgZoom, lgRotate, lgPager], // 启用插件
+            thumbnail: true,          // 显示缩略图
+            zoom: true,               // 启用缩放功
+            rotate: true,             // 启用旋转功能能
+            autoplay: true,        // 启用自动播放功能
+            fullScreen: true,      // 启用全屏功能
+            pager: false, //页码,
+            zoomFromOrigin: true,   // 从原始位置缩放
+            actualSize: true,       // 启用查看实际大小的功能
+            enableZoomAfter: 300,    // 延迟缩放，确保图片加载完成后可缩放
+        };
+        lightGallery(document.getElementsByClassName('.article-gallery')[0], options1); // 修复选择器
+    }
+    
+</script>
+
+
+                </div>
+            
+            
+                <!-- 回到顶部的按钮-->
+                <div class="progress-wrap shadow-drop-2-bottom">
+                    <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+                        <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"/>
+                    </svg>
+                </div>
+            
+            
+                <!-- 返回的按钮-->
+                <div class="return-to-last-progress-wrap shadow-drop-2-bottom">
+                    <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+                        <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"/>
+                    </svg>
+                </div>
+            
+    </body>
+</html>
+<script src="/js/emojiHandler.js"></script>
+<script src="/js/search.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        wrapEmojis('.paper');
+    });
+</script>

@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+    <style>
+        body
+        {
+            font-family: "Times New Roman", Helvetica, Tahoma, Arial, "LXGW WenKai", "notoserifsc-medium", "Microsoft YaHei", "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif !important;
+
+        }
+    </style>
+
+
+    <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport" />
+    <meta name="description" content="MCP 协议详解：从设计原理到手写一个 MCP Server" />
+    <meta name="hexo-theme-A4" content="v2.1.0" />
+    <link rel="alternate icon" type="image/webp" href="https://cdn.jsdelivr.net/gh/BlazeX-Pro/img/source/images/favicon.webp">
+    <title>MCP 协议详解：从设计原理到手写一个 MCP Server | Blaze | a guy who loves fresh things</title>
+
+    
+        
+<link rel="stylesheet" href="/css/highlight/style1.css">
+
+        
+<link rel="stylesheet" href="/css/a11y-dark.min.css">
+
+        
+<link rel="stylesheet" href="/css/reset.css">
+
+        
+<link rel="stylesheet" href="/css/markdown.css">
+
+        
+<link rel="stylesheet" href="/css/fonts.css">
+
+         <!--注意：首页既不是post也不是page-->
+        
+            
+<link rel="stylesheet" href="/css/waline.css">
+
+        
+
+        
+<link rel="stylesheet" href="/css/ui.css">
+
+        
+<link rel="stylesheet" href="/css/style.css">
+
+
+        
+            <!--返回顶部css-->
+            
+<link rel="stylesheet" href="/css/returnToTop.css">
+
+            
+<link rel="stylesheet" href="/css/unicons.css">
+
+        
+        
+            <!--目录-->
+            
+<link rel="stylesheet" href="/css/toc.css">
+
+        
+    
+
+    
+        
+<link rel="stylesheet" href="/css/returnToLastPage.css">
+
+    
+
+    
+<link rel="stylesheet" href="/css/lightgallery-bundle.min.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/custom.css">
+
+    
+
+    
+
+    <!-- <link rel="stylesheet" href="https://chinese-fonts-cdn.deno.dev/packages/lxgwwenkai/dist/LXGWWenKai-Regular/result.css" /> -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/@chinese-fonts/lxgwwenkai@3.0.0/dist/LXGWWenKai-Regular/result.css' />
+
+    
+
+    
+<meta name="generator" content="Hexo 7.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/rss2.xml" title="Blaze" type="application/rss+xml">
+</head>
+
+    
+    
+
+    
+    
+
+
+
+    
+
+    
+    
+
+
+
+
+    <style>
+        .archive-main a:hover {
+            text-decoration: none; 
+        }
+    </style>
+
+    
+    
+
+
+    <body>
+        
+        <script src="https://cdn.jsdelivr.net/npm/darkreader@4.9.80/darkreader.min.js"></script>
+        <script>
+            const drOptions = {
+                brightness: 100,
+                contrast: 95,
+                sepia: 10,
+                darkSchemeTextColor: '#e0e0e0',  // 粉笔白文字
+                darkSchemeBackgroundColor: '#1e1e1e', // 黑板灰背景
+                scrollbarStyle: 'native'
+            };
+
+            const savedTheme = localStorage.getItem('theme');
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+                DarkReader.enable(drOptions);
+            }
+
+            window.addEventListener('DOMContentLoaded', () => {
+                const btn = document.createElement('button');
+                btn.innerText = '🌓';
+                // 按钮样式：仿照你之前的布局，放在右下角
+                btn.style.cssText = `
+                    position: fixed; 
+                    bottom: 40px; 
+                    left: 42px; 
+                    z-index: 9999;
+                    width: 44px; 
+                    height: 44px; 
+                    border-radius: 50%; 
+                    border: 1px solid #ccc;
+                    background: #f7f5ed; 
+                    color: #000;
+                    font-size: 22px; 
+                    cursor: pointer;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+                    transition: transform 0.2s, background-color 0.3s;
+                `;
+                // 根据当前状态初始化按钮颜色
+                if (DarkReader.isEnabled()) {
+                    btn.style.backgroundColor = '#1e1e1e';
+                    btn.style.color = '#fff';
+                }
+                btn.onmouseover = () => btn.style.transform = 'scale(1.1)';
+                btn.onmouseout = () => btn.style.transform = 'scale(1)';
+                document.body.appendChild(btn);
+                // 点击切换逻辑
+                btn.addEventListener('click', () => {
+                    if (DarkReader.isEnabled()) {
+                        DarkReader.disable();
+                        localStorage.setItem('theme', 'light');
+                        btn.style.backgroundColor = '#f7f5ed';
+                        btn.style.color = '#000';
+                    } else {
+                        DarkReader.enable(drOptions);
+                        localStorage.setItem('theme', 'dark');
+                        btn.style.backgroundColor = '#1e1e1e';
+                        btn.style.color = '#fff';
+                    }
+                });
+            });
+        </script>
+        
+        
+            
+                <div class="left-toc-container">
+                    <nav id="toc" class="bs-docs-sidebar"></nav>
+                </div>
+            
+        
+        <div class="paper">
+
+            
+
+            
+                <div class="shadow-drop-2-bottom paper-main">
+                    
+
+
+<div class="header">
+    <div class="header-container">
+        <style>
+            .header-img {
+                width: 56px;
+                height: auto;
+                object-fit: cover; /* 保持图片比例 */
+                transition: transform 0.3s ease-in-out; 
+                border-radius: 50%; 
+            }
+            
+        </style>
+        <img 
+            alt="^-^" 
+            cache-control="max-age=86400" 
+            class="header-img" 
+            src="https://cdn.jsdelivr.net/gh/BlazeX-Pro/img/source/images/favicon.webp" 
+        />
+        <div class="header-content">
+            <a class="logo" href="/">Blaze</a> 
+            <span class="description">全栈开发 | 热爱生活与技术</span> 
+        </div>
+    </div>
+    
+   
+    <ul class="nav">
+        
+            
+                <li><a href="/">🚀首页</a></li>
+            
+        
+            
+                <li><a href="/list/">🖊️文章</a></li>
+            
+        
+            
+                <li><a href="/works/">🌈作品</a></li>
+            
+        
+            
+                <li><a href="/tags/">🌟标签</a></li>
+            
+        
+            
+                <li><a href="/categories/">🗂️分类</a></li>
+            
+        
+            
+                <li><a href="/message/">💬留言</a></li>
+            
+        
+            
+                <li><a href="/about/">🤳关于</a></li>
+            
+        
+            
+                <li><a href="/now/">⚡️Now</a></li>
+            
+        
+        <!-- 暂时注释掉，还需要调整css  -->
+    </ul>
+</div>
+
+                    
+                    
+
+                    
+                    
+
+                    <!--说明是文章post页面-->
+                    
+                        <div class="post-main">
+    
+
+    
+        
+            
+                <div class="post-main-title" style="text-align: center;">
+                    MCP 协议详解：从设计原理到手写一个 MCP Server
+                </div>
+            
+        
+      
+    
+
+    
+
+        
+            <div class="post-head-meta-center">
+        
+                
+                
+                    
+                     <span>字数总计：898</span>
+                
+                
+                    
+                        &nbsp; | &nbsp;
+                    
+                    <span>阅读估时：3分钟</span>
+                
+                
+            </div>
+    
+
+    <div class="post-md">
+        
+            
+                <ol class="post-toc"><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#MCP-%E4%B9%8B%E5%89%8D%E7%9A%84%E4%B8%96%E7%95%8C%EF%BC%9AN%C3%97M-%E9%9B%86%E6%88%90%E5%9C%B0%E7%8B%B1"><span class="post-toc-text">MCP 之前的世界：N×M 集成地狱</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E5%8D%8F%E8%AE%AE%E4%B8%89%E8%A7%92%E8%89%B2"><span class="post-toc-text">协议三角色</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E6%89%8B%E5%86%99%E4%B8%80%E4%B8%AA-Server%EF%BC%88Python-FastMCP%EF%BC%89"><span class="post-toc-text">手写一个 Server（Python + FastMCP）</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E4%BC%81%E4%B8%9A%E7%BA%A7%E8%90%BD%E5%9C%B0%E7%9A%84%E5%9B%9B%E4%B8%AA%E5%85%B3%E9%94%AE"><span class="post-toc-text">企业级落地的四个关键</span></a></li><li class="post-toc-item post-toc-level-2"><a class="post-toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="post-toc-text">小结</span></a></li></ol>
+            
+        
+        <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/hint.css/2.7.0/hint.min.css"><div class=".article-gallery"><p>做企业智能体平台时，MCP（Model Context Protocol）是工具生态的地基。这篇讲清楚三件事：MCP 解决什么问题、协议长什么样、自己写一个 Server 要几步。</p>
+<h2 id="MCP-之前的世界：N×M-集成地狱"><a href="#MCP-之前的世界：N×M-集成地狱" class="headerlink" title="MCP 之前的世界：N×M 集成地狱"></a>MCP 之前的世界：N×M 集成地狱</h2><p>在 MCP 出现前，每个 AI 应用对接每个工具都要写专属适配代码：n 个模型应用 × m 个工具系统 = n×m 套集成。而且各家 Function Calling 的函数描述格式、鉴权方式、调用协议都不统一。</p>
+<p>MCP 的思路和当年的 JDBC 如出一辙：<strong>定一个统一协议，工具方实现一次 Server，任何支持 MCP 的 Agent（Host/Client）都能即插即用</strong>。M=1，复杂度从 n×m 降到 n+m。</p>
+<h2 id="协议三角色"><a href="#协议三角色" class="headerlink" title="协议三角色"></a>协议三角色</h2><figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Host（宿主应用，如 Claude Desktop / 智能体平台）</span><br><span class="line">  └── MCP Client（与每个 Server 维持一条会话）</span><br><span class="line">        └── MCP Server（暴露工具/资源/提示词）</span><br></pre></td></tr></tbody></table></figure>
+
+<p>Server 向 Client 暴露三类能力：</p>
+<ul>
+<li><strong>Tools</strong>：可调用的函数（最常用，对应 Function Calling）；</li>
+<li><strong>Resources</strong>：可读取的数据源（文件、数据库表）；</li>
+<li><strong>Prompts</strong>：可复用的提示词模板。</li>
+</ul>
+<p>传输层支持 stdio（本地进程）和 Streamable HTTP（远程服务）。企业场景基本都是 HTTP：Server 部署在内网，带鉴权，多租户隔离。</p>
+<h2 id="手写一个-Server（Python-FastMCP）"><a href="#手写一个-Server（Python-FastMCP）" class="headerlink" title="手写一个 Server（Python + FastMCP）"></a>手写一个 Server（Python + FastMCP）</h2><p>以”查询企业通讯录”工具为例：</p>
+<figure class="highlight python"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> mcp.server.fastmcp <span class="keyword">import</span> FastMCP</span><br><span class="line"></span><br><span class="line">mcp = FastMCP(<span class="string">"corp-directory"</span>)</span><br><span class="line"></span><br><span class="line"><span class="meta">@mcp.tool()</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">search_employee</span>(<span class="params">name: <span class="built_in">str</span>, department: <span class="built_in">str</span> | <span class="literal">None</span> = <span class="literal">None</span></span>) -&gt; <span class="built_in">dict</span>:</span><br><span class="line">    <span class="string">"""按姓名搜索员工，返回工号、部门、邮箱。department 可选，用于缩小范围"""</span></span><br><span class="line">    query = {<span class="string">"name"</span>: name}</span><br><span class="line">    <span class="keyword">if</span> department:</span><br><span class="line">        query[<span class="string">"dept"</span>] = department</span><br><span class="line">    <span class="keyword">return</span> employee_db.find(query, limit=<span class="number">5</span>)</span><br><span class="line"></span><br><span class="line"><span class="meta">@mcp.tool()</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">org_tree</span>(<span class="params">dept_id: <span class="built_in">str</span></span>) -&gt; <span class="built_in">dict</span>:</span><br><span class="line">    <span class="string">"""查询部门组织树，返回子部门与人员编制"""</span></span><br><span class="line">    <span class="keyword">return</span> org_service.tree(dept_id)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    mcp.run(transport=<span class="string">"streamable-http"</span>)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>FastMCP 框架把协议细节全包了：<strong>函数签名自动生成 JSON Schema，docstring 直接成为工具描述</strong>（这就是为什么工具描述要认真写——模型全靠它决策）。注册、发现、调用的协议握手、能力协商（initialize / tools/list / tools/call）全部自动完成。</p>
+<h2 id="企业级落地的四个关键"><a href="#企业级落地的四个关键" class="headerlink" title="企业级落地的四个关键"></a>企业级落地的四个关键</h2><p>协议跑通只是 10%，生产化才是大头：</p>
+<p><strong>1. 注册与发现。</strong> 平台侧要有 MCP Server 注册中心：Server 元信息（能力清单、版本、负责人）、健康检查、按租户/角色的可见性配置。企业里工具只会越来越多，”哪些智能体允许挂哪些工具”必须是配置化的。</p>
+<p><strong>2. 鉴权。</strong> Streamable HTTP Server 挂在内网也要鉴权：平台调用 Server 时带上服务身份 Token（不是终端用户的），Server 侧按调用方收敛工具清单——防止一个智能体越权调用财务系统的接口。</p>
+<p><strong>3. 参数校验与超时。</strong> Server 是不可信边界的延伸：模型可能传非法参数，必须 schema 校验后落库/调接口；工具超时设上限（比如 10s），超时降级为错误信息回传模型，别让一个慢工具拖死整条编排链路。</p>
+<p><strong>4. 审计留痕。</strong> 每次 tools/call 记录：哪个智能体、哪个用户会话、调了什么工具、参数摘要、结果摘要、耗时。出了问题能回放，这是企业客户验收的硬指标。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>MCP 之于 Agent 生态，如同 JDBC 之于数据库生态、USB-C 之于外设：协议统一后，工具生态才能规模化。从 Function Calling 到 MCP，变化的不是”模型能调工具”这个能力本身，而是**工具从”每个应用私有”变成”全生态共享的资产”**。</p>
+</div><script src="https://jsd.onmicrosoft.cn/npm/hexo-theme-a4@latest/source/js/lightgallery.min.js"></script><script>if (typeof lightGallery !== 'undefined') {
+        var options = {
+            selector: '.gallery-item'
+        };
+        lightGallery(document.getElementsByClassName('.article-gallery')[0], options);
+        }</script>
+    </div>
+
+    <div class="post-meta">
+        <i>
+        
+            <span>2026-02-28</span>
+            
+                <span>该篇文章被 Blaze</span>
+            
+            
+                <span>打上标签:
+                    
+                    
+                        <a href='/tags/MCP/'>
+                            MCP
+                        </a>
+                    
+                </span>
+             
+             
+                <span>归为分类:
+                    
+                    
+                        <a href='/categories/%E5%BC%80%E5%8F%91/'>
+                            开发
+                        </a>
+                    
+                </span>
+            
+        
+        </i>
+    </div>
+    <br>
+    
+    
+
+    
+        
+    <div class="comments-container">
+    <div id="comment-anchor"></div>
+    <div class="comment-area-title">
+        以上
+    </div>
+    
+        
+
+    <div id="waline"></div>
+    <script type="module"  >
+        import { init } from 'https://npm.elemecdn.com/hexo-theme-a4@latest/source/js/waline.mjs';
+        function loadWaline() {
+            init({
+                el: '#waline',
+                serverURL: 'https://comment.liehuocoder.online/',
+                lang: 'zh-CN',
+                dark: 'body[class~="dark-mode"]',
+                requiredMeta: ['nick','mail'], // cannot customize by theme config, change it yourself
+                search: false, // 禁止表情包搜索
+                reaction: false, // 对文章打分
+                pageview: false, // 浏览量统计
+                comment: false, // 评论数统计
+
+                locale: {
+                    placeholder: '留言可以增加智力，不信你试试？',
+                    sofa: ''
+                },
+            });
+
+        }
+        window.addEventListener('DOMContentLoaded', loadWaline);
+    </script>
+
+
+
+    
+    
+    
+    
+    </div>
+
+
+     
+</div>
+
+
+
+
+                    
+
+                    <div class="footer">
+    
+        <span> 
+            © 2026 Blaze
+
+            
+                
+
+            
+                
+                    / <a href="/friends/"> 友链 </a>
+                
+
+            
+                
+                    / <a href="/contact/"> 联系 </a>
+                
+
+            
+                
+                    / <a href="/support/"> 支持 </a>
+                
+
+            
+                
+                    / <a href="/subscribe/"> 订阅 </a>
+                
+
+            
+        </span>
+       
+    
+</div>
+
+
+
+<!--这是指一条线往下的内容-->
+<div class="footer-last">
+    
+            <span>🔥做自己最喜欢的，做自己最擅长的🔥</span>
+            
+                <span class="footer-last-span-right">
+                    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">赣ICP备2026025832号</a>
+                    
+                </span>
+            
+            
+                <span class="footer-last-span-right"><i>本站由<a target="_blank" rel="noopener" href="https://hexo.io/zh-cn/index.html">Hexo</a>驱动｜使用<a target="_blank" rel="noopener" href="https://github.com/HiNinoJay/hexo-theme-A4">Hexo-theme-A4</a>主题</i></span>
+            
+    
+</div>
+
+
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+
+    <!--目录-->
+    
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript" ></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" type="text/javascript" ></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tocify/1.9.0/javascripts/jquery.tocify.min.js" type="text/javascript" ></script>
+        
+<script src="/js/toc.js"></script>
+
+    
+
+    
+<script src="/js/randomHeaderContent.js"></script>
+
+    <!--回到顶部按钮-->
+    
+        
+<script src="/js/returnToTop.js"></script>
+
+    
+
+    
+        
+<script src="/js/returnToLastPage.js"></script>
+
+    
+
+
+
+
+
+<script src="/js/lightgallery/lightgallery.umd.min.js"></script>
+
+
+
+<script src="/js/lightgallery/plugins/lg-thumbnail.umd.min.js"></script>
+
+
+
+<script src="/js/lightgallery/plugins/lg-fullscreen.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-autoplay.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-zoom.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-rotate.umd.min.js"></script>
+
+
+<script src="/js/lightgallery/plugins/lg-paper.umd.min.js"></script>
+
+
+
+
+<script type="text/javascript">
+     
+    if (typeof lightGallery !== "undefined") {
+        var options1 = {
+            selector: '.gallery-item',
+            plugins: [lgThumbnail, lgFullscreen, lgAutoplay, lgZoom, lgRotate, lgPager], // 启用插件
+            thumbnail: true,          // 显示缩略图
+            zoom: true,               // 启用缩放功
+            rotate: true,             // 启用旋转功能能
+            autoplay: true,        // 启用自动播放功能
+            fullScreen: true,      // 启用全屏功能
+            pager: false, //页码,
+            zoomFromOrigin: true,   // 从原始位置缩放
+            actualSize: true,       // 启用查看实际大小的功能
+            enableZoomAfter: 300,    // 延迟缩放，确保图片加载完成后可缩放
+        };
+        lightGallery(document.getElementsByClassName('.article-gallery')[0], options1); // 修复选择器
+    }
+    
+</script>
+
+
+                </div>
+            
+            
+                <!-- 回到顶部的按钮-->
+                <div class="progress-wrap shadow-drop-2-bottom">
+                    <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+                        <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"/>
+                    </svg>
+                </div>
+            
+            
+                <!-- 返回的按钮-->
+                <div class="return-to-last-progress-wrap shadow-drop-2-bottom">
+                    <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+                        <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98"/>
+                    </svg>
+                </div>
+            
+    </body>
+</html>
+<script src="/js/emojiHandler.js"></script>
+<script src="/js/search.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        wrapEmojis('.paper');
+    });
+</script>

@@ -1,17 +1,20 @@
 
 
 .left-toc-container{ 
-  top: 206px;
+  top: 100px;
   left: 1px;
   bottom: 110px;
   overflow-y: auto; /* 或者使用 overflow-y: scroll; */
   max-height: -webkit-fill-available; /* 设置最大高度，可以根据需要进行调整 */
   position: fixed;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  /* 宽度跟随内容宽度适配：正文 .paper-main 最大 880px 居中，目录最大不超过内容区左侧留白，避免长标题时与正文重叠 */
+  max-width: calc((100vw - 880px) / 2 - 2vw);
 }
 
 .left-toc-container::-webkit-scrollbar {
   width: 10px; /* 设置滚动条宽度 */
+  display: none;
 }
 
 .left-toc-container::-webkit-scrollbar-thumb {
